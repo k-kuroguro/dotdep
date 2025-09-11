@@ -1,0 +1,24 @@
+{
+   "tasks": {},
+   "lint": {
+      "rules": {
+         "tags": [
+            "recommended"
+         ]
+      }
+   },
+   "fmt": {
+      "indentWidth": 3,
+      "semiColons": true,
+      "singleQuote": true,
+      "lineWidth": 120
+   },
+   "exclude": [],
+   "imports": {
+      "@/": "./src/",
+      "$std/fs": "jsr:@std/fs@^0.224.0",
+      "$std/path": "jsr:@std/path@^0.224.0",
+      "neverthrow": "npm:neverthrow@8.2.0"
+   },
+   "nodeModulesDir": "auto"
+}
