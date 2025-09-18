@@ -2,3 +2,4 @@
 
 Dotdep is a library for **dot**files **dep**loying runs on Deno.
 
+// TODO: Add more actions: write, copy, mkdir.
