@@ -1,36 +1,49 @@
-import type { Action, Log } from './types.ts';
+import type { Action, ActionResult } from './types.ts';
 import { isRevertibleAction } from './types.ts';
 
-export interface Task {
-   actions: ReadonlyArray<Action>;
-   plan(): AsyncIterableIterator<Log>;
-   apply(): AsyncIterableIterator<Log>;
+// TODO: Consider an ExecutionContext to pass planned state between actions.
+//       This would allow subsequent actions in a plan to be aware of
+//       changes made by preceding actions (e.g., a planned file removal).
+
+export interface TaskHook {
+   onStart(action: Action): void;
+   onEnd(action: Action, result: ActionResult): void;
 }
 
-export const defineTask = (actions: Action[]): Task => {
+export interface Task {
+   plan(): AsyncIterableIterator<ActionResult>;
+   apply(): AsyncIterableIterator<ActionResult>;
+}
+
+export const defineTask = (actions: readonly Action[], hook?: TaskHook): Task => {
    return {
-      actions,
       async *plan() {
          for (const action of actions) {
-            for await (const log of action.plan()) {
-               yield log;
-            }
+            if (hook) hook.onStart(action);
+            const result = await action.plan();
+            if (hook) hook.onEnd(action, result);
+            yield result;
          }
       },
       async *apply() {
          for (const action of actions) {
-            for await (const log of action.apply()) {
-               yield log;
-            }
+            if (hook) hook.onStart(action);
+            const result = await action.apply();
+            if (hook) hook.onEnd(action, result);
+            yield result;
          }
       },
    };
 };
 
-export const getUninstallTask = (target: Task): Task => {
-   const revertibleActions = target.actions.filter(isRevertibleAction);
-   const revertActions = revertibleActions.map((action) => action.getRevertAction()).reverse();
-   return defineTask(revertActions);
+export const getUninstallTask = (actions: readonly Action[], hook?: TaskHook): Task => {
+   return defineTask(
+      actions
+         .filter(isRevertibleAction)
+         .map((action) => action.getRevertAction())
+         .reverse(),
+      hook,
+   );
 };
 
 export * from './actions/mod.ts';

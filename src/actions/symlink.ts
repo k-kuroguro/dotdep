@@ -1,135 +1,50 @@
 import { exists } from '$std/fs';
 import { dirname, resolve } from '$std/path';
 
-import type { Action, RevertibleAction } from '@/types.ts';
-import { LogStatus } from '@/types.ts';
+import type { Action, ActionResult, RevertibleAction } from '@/types.ts';
+import { ActionStatus } from '@/types.ts';
 
 import { RemoveAction } from './remove.ts';
-
-interface SymlinkState {
-   srcExists: boolean;
-   destExists: boolean;
-   isSameLink: boolean;
-}
-
-const getSymlinkState = async (src: string, dest: string): Promise<SymlinkState> => {
-   const srcExists = await exists(src);
-   const destExists = await exists(dest);
-   const isSameLink = destExists && await (async () => {
-      try {
-         return (await Deno.realPath(dest) === await Deno.realPath(src));
-      } catch (_e) {
-         return false;
-      }
-   })();
-
-   return {
-      srcExists,
-      destExists,
-      isSameLink,
-   };
-};
 
 export interface SymlinkOptions {
    force: boolean;
 }
 
 export class SymlinkAction implements RevertibleAction {
-   private getTitle = () => `Symlink: ${this.src} -> ${this.dest}`;
-   private getSrcNotExistsDetail = () => `Source not found: ${this.src}`;
-   private getDestExistsDetail = () => `Destination already exists and is not the correct symlink: ${this.dest}`;
-   private getIsSameLinkDetail = () => 'Symlink already exists and is correct.';
-   private getFailedToCreateDetail = (error: string) => `An error occurred: ${error}`;
+   private readonly options: SymlinkOptions;
 
-   constructor(private src: string, private dest: string, private options: Partial<SymlinkOptions> = {}) {
+   constructor(private readonly src: string, private readonly dest: string, options: Partial<SymlinkOptions> = {}) {
       this.options = { force: false, ...options };
    }
 
-   async *plan() {
-      const state = await getSymlinkState(this.src, this.dest);
-
-      if (state.isSameLink) {
-         yield {
-            status: LogStatus.Skip,
-            title: this.getTitle(),
-            detail: this.getIsSameLinkDetail(),
-         };
-         return;
-      }
-
-      if (!state.srcExists) {
-         yield {
-            status: LogStatus.Error,
-            title: this.getTitle(),
-            detail: this.getSrcNotExistsDetail(),
-         };
-         return;
-      }
-
-      if (state.destExists && !this.options.force) {
-         yield {
-            status: LogStatus.Error,
-            title: this.getTitle(),
-            detail: this.getDestExistsDetail(),
-         };
-         return;
-      }
-
-      yield {
-         status: LogStatus.Success,
-         title: this.getTitle(),
-      };
+   get title(): string {
+      return `Symlink: ${this.src} -> ${this.dest}`;
    }
 
-   async *apply() {
-      const state = await getSymlinkState(this.src, this.dest);
-      if (state.isSameLink) {
-         yield {
-            status: LogStatus.Skip,
-            title: this.getTitle(),
-            detail: this.getIsSameLinkDetail(),
-         };
-         return;
-      }
+   plan(): Promise<ActionResult> {
+      return this.getPreflightResult();
+   }
 
-      if (!state.srcExists) {
-         yield {
-            status: LogStatus.Error,
-            title: this.getTitle(),
-            detail: this.getSrcNotExistsDetail(),
-         };
-         return;
-      }
-
-      if (state.destExists && !this.options.force) {
-         yield {
-            status: LogStatus.Error,
-            title: this.getTitle(),
-            detail: this.getDestExistsDetail(),
-         };
-         return;
-      }
+   async apply(): Promise<ActionResult> {
+      const state = await this.getPreflightResult();
+      if (state.status !== ActionStatus.Success) return state;
 
       try {
          const destDir = dirname(this.dest);
+
          if (!await exists(destDir)) {
             Deno.mkdirSync(destDir, { recursive: true });
          }
-
-         if (state.destExists && this.options.force) {
+         if (await exists(this.dest)) {
             await Deno.remove(this.dest, { recursive: true });
          }
-
          Deno.symlinkSync(resolve(this.src), this.dest);
-         yield {
-            status: LogStatus.Success,
-            title: this.getTitle(),
-         };
-      } catch (error) {
-         yield {
-            status: LogStatus.Error,
-            title: this.getTitle(),
-            detail: this.getFailedToCreateDetail(error instanceof Error ? error.message : String(error)),
+
+         return state;
+      } catch (error: unknown) {
+         return {
+            status: ActionStatus.Error,
+            detail: `An error occurred: ${error instanceof Error ? error.message : String(error)}`,
          };
       }
    }
@@ -137,4 +52,43 @@ export class SymlinkAction implements RevertibleAction {
    getRevertAction(): Action {
       return new RemoveAction(this.dest);
    }
+
+   private async getPreflightResult(): Promise<ActionResult> {
+      const srcExists = await exists(this.src);
+      const destExists = await exists(this.dest);
+      const isSameLink = destExists && await (async () => {
+         try {
+            return (await Deno.realPath(this.dest) === await Deno.realPath(this.src));
+         } catch (_e) {
+            return false;
+         }
+      })();
+
+      if (isSameLink) {
+         return {
+            status: ActionStatus.Skip,
+            detail: 'Symlink already exists and is correct.',
+         };
+      }
+
+      if (!srcExists) {
+         return {
+            status: ActionStatus.Error,
+            detail: `Source not found: ${this.src}`,
+         };
+      }
+
+      if (destExists && !this.options.force) {
+         return {
+            status: ActionStatus.Error,
+            detail: `Destination already exists and is not the correct symlink: ${this.dest}`,
+         };
+      }
+
+      return { status: ActionStatus.Success };
+   }
 }
+
+export const link = (src: string, dest: string, options: Partial<SymlinkOptions> = {}): Action => {
+   return new SymlinkAction(src, dest, options);
+};

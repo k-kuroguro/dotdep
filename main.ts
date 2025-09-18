@@ -1,12 +1,8 @@
 import { parse } from 'https://deno.land/std@0.203.0/flags/mod.ts';
+import { Spinner } from 'jsr:@std/cli/unstable-spinner';
 
-import type { Log, Task } from '@/mod.ts';
-import { defineTask, getUninstallTask, InitialBackupAction, LogStatus, SymlinkAction } from '@/mod.ts';
-
-const myTask = defineTask([
-   new InitialBackupAction('a.txt'),
-   new SymlinkAction('./aaa/a.txt', 'a.txt', { force: true }),
-]);
+import type { Action, ActionResult, Task, TaskHook } from '@/mod.ts';
+import { ActionStatus, createInitialBackup, defineTask, getUninstallTask, link } from '@/mod.ts';
 
 const colors = {
    green: (text: string) => `\x1b[32m${text}\x1b[0m`,
@@ -15,16 +11,16 @@ const colors = {
    syan: (text: string) => `\x1b[36m${text}\x1b[0m`,
 };
 
-const printLog = (log: Log) => {
+const printLog = (log: ActionResult & { title: string }) => {
    let coloredTitle: string;
    switch (log.status) {
-      case LogStatus.Success:
+      case ActionStatus.Success:
          coloredTitle = colors.green(`[SUCCESS] ${log.title}`);
          break;
-      case LogStatus.Error:
+      case ActionStatus.Error:
          coloredTitle = colors.red(`[ERROR] ${log.title}`);
          break;
-      case LogStatus.Skip:
+      case ActionStatus.Skip:
          coloredTitle = colors.syan(`[SKIP] ${log.title}`);
          break;
       default:
@@ -32,24 +28,48 @@ const printLog = (log: Log) => {
    }
    console.log(coloredTitle);
    if (log.detail) {
-      console.log(`  └─ ${log.detail}`);
+      console.log(`  └─ ${log.detail}`);
    }
 };
 
+class SpinnerHook implements TaskHook {
+   private spinner: Spinner;
+
+   constructor() {
+      this.spinner = new Spinner();
+   }
+
+   onStart(action: Action) {
+      this.spinner.message = `[spin] ${action.title}`;
+      this.spinner.start();
+   }
+
+   onEnd(action: Action, result: ActionResult) {
+      this.spinner.stop();
+      printLog({ ...result, title: action.title });
+   }
+}
+
+const hook = new SpinnerHook();
+
+const actions = [
+   createInitialBackup('a.txt'),
+   link('./aaa/a.txt', 'a.txt', { force: true }),
+];
+const myTask = defineTask(actions, hook);
+
+// runPlan と runDeploy を修正
 const runPlan = async (task: Task) => {
    console.log('--- Plan ---');
-   for await (const log of task.plan()) {
-      printLog(log);
-   }
+   for await (const _ of task.plan()) {}
 };
 
 const runDeploy = async (task: Task) => {
    console.log('--- Deploy ---');
-   for await (const log of task.apply()) {
-      printLog(log);
-   }
+   for await (const _ of task.apply()) {}
 };
 
+// main 関数はそのまま
 const main = async () => {
    const args = parse(Deno.args);
    const [command] = args._;
@@ -58,7 +78,7 @@ const main = async () => {
       if (command === 'deploy') {
          await runPlan(myTask);
       } else if (command === 'uninstall') {
-         const uninstallTask = getUninstallTask(myTask);
+         const uninstallTask = getUninstallTask(actions, hook);
          await runPlan(uninstallTask);
       } else {
          console.error('Invalid command for --dry-run. Use "deploy" or "uninstall".');
@@ -68,7 +88,7 @@ const main = async () => {
       if (command === 'deploy') {
          await runDeploy(myTask);
       } else if (command === 'uninstall') {
-         const uninstallTask = getUninstallTask(myTask);
+         const uninstallTask = getUninstallTask(actions, hook);
          await runDeploy(uninstallTask);
       } else {
          console.error('Invalid command. Use "deploy", "uninstall", or "help".');

@@ -1,19 +1,19 @@
-export const LogStatus = {
+export const ActionStatus = {
    Success: 'success',
    Error: 'error',
    Skip: 'skip',
 } as const;
-export type LogStatus = typeof LogStatus[keyof typeof LogStatus];
+export type ActionStatus = typeof ActionStatus[keyof typeof ActionStatus];
 
-export interface Log {
-   status: LogStatus;
-   title: string;
+export interface ActionResult {
+   status: ActionStatus;
    detail?: string;
 }
 
 export interface Action {
-   plan(): AsyncIterableIterator<Log>;
-   apply(): AsyncIterableIterator<Log>;
+   title: string;
+   plan(): Promise<ActionResult>;
+   apply(): Promise<ActionResult>;
 }
 
 export interface RevertibleAction extends Action {
