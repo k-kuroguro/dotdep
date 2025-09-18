@@ -7,16 +7,16 @@ import { ActionStatus } from '@/types.ts';
 
 const BACKUP_DIR = join(Deno.env.get('HOME') || '', '.dotdep', 'backups');
 
-const generateBackupHash = (filePath: string): string => {
+const generateBackupHash = (path: string): string => {
    const encoder = new TextEncoder();
-   const data = encoder.encode(filePath);
+   const data = encoder.encode(path);
    const hashBuffer = crypto.subtle.digestSync('SHA-256', data);
    const hashArray = Array.from(new Uint8Array(hashBuffer));
    return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
 };
 
-const getBackupPath = (filePath: string): string => {
-   const hash = generateBackupHash(resolve(filePath));
+const getBackupPath = (path: string): string => {
+   const hash = generateBackupHash(resolve(path));
    return join(BACKUP_DIR, hash);
 };
 
@@ -72,10 +72,10 @@ export class InitialBackupAction implements RevertibleAction {
 }
 
 export class RestoreBackupAction implements Action {
-   constructor(private readonly backupPath: string, private readonly restorePath: string) {}
+   constructor(private readonly src: string, private readonly dest: string) {}
 
    get title(): string {
-      return `Restore: ${this.backupPath} -> ${this.restorePath}`;
+      return `Restore: ${this.src} -> ${this.dest}`;
    }
 
    plan(): Promise<ActionResult> {
@@ -87,8 +87,8 @@ export class RestoreBackupAction implements Action {
       if (state.status !== ActionStatus.Success) return state;
 
       try {
-         await Deno.copyFile(this.backupPath, this.restorePath);
-         await Deno.remove(this.backupPath);
+         await Deno.copyFile(this.src, this.dest);
+         await Deno.remove(this.src);
          return state;
       } catch (error) {
          return {
@@ -99,14 +99,14 @@ export class RestoreBackupAction implements Action {
    }
 
    private async getPreflightResult(): Promise<ActionResult> {
-      if (!await exists(this.backupPath)) {
-         return { status: ActionStatus.Skip, detail: `Backup file not found: ${this.backupPath}` };
+      if (!await exists(this.src)) {
+         return { status: ActionStatus.Skip, detail: `Backup not found: ${this.src}` };
       }
 
-      if (await exists(this.restorePath)) {
+      if (await exists(this.dest)) {
          return {
             status: ActionStatus.Error,
-            detail: `Restore path already exists: ${this.restorePath}`,
+            detail: `Destination already exists: ${this.dest}`,
          };
       }
 
@@ -114,10 +114,19 @@ export class RestoreBackupAction implements Action {
    }
 }
 
-export const createInitialBackup = (path: string): RevertibleAction => {
+export interface InitialBackupParams {
+   path: string;
+}
+
+export interface RestoreBackupParams {
+   src: string;
+   dest: string;
+}
+
+export const createInitialBackup = ({ path }: Readonly<InitialBackupParams>): Action => {
    return new InitialBackupAction(path);
 };
 
-export const restoreBackup = (backupPath: string, restorePath: string): Action => {
-   return new RestoreBackupAction(backupPath, restorePath);
+export const restoreBackup = ({ src, dest }: Readonly<RestoreBackupParams>): Action => {
+   return new RestoreBackupAction(src, dest);
 };

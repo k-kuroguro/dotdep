@@ -1,8 +1,8 @@
 import { parse } from 'https://deno.land/std@0.203.0/flags/mod.ts';
 import { Spinner } from 'jsr:@std/cli/unstable-spinner';
 
-import type { Action, ActionResult, Task, TaskHook } from '@/mod.ts';
-import { ActionStatus, createInitialBackup, defineTask, getUninstallTask, link } from '@/mod.ts';
+import type { Action, ActionResult } from '@/mod.ts';
+import { ActionStatus, cmd, getUninstallActions } from '@/mod.ts';
 
 const colors = {
    green: (text: string) => `\x1b[32m${text}\x1b[0m`,
@@ -32,7 +32,11 @@ const printLog = (log: ActionResult & { title: string }) => {
    }
 };
 
-class SpinnerHook implements TaskHook {
+const actions = [
+   cmd({ cmd: { cmd: 'exit', args: ['0'] } }),
+];
+
+class SpinnerHook {
    private spinner: Spinner;
 
    constructor() {
@@ -40,7 +44,7 @@ class SpinnerHook implements TaskHook {
    }
 
    onStart(action: Action) {
-      this.spinner.message = `[spin] ${action.title}`;
+      this.spinner.message = `${action.title}`;
       this.spinner.start();
    }
 
@@ -50,35 +54,40 @@ class SpinnerHook implements TaskHook {
    }
 }
 
-const hook = new SpinnerHook();
-
-const actions = [
-   createInitialBackup('a.txt'),
-   link('./aaa/a.txt', 'a.txt', { force: true }),
-];
-const myTask = defineTask(actions, hook);
-
 // runPlan と runDeploy を修正
-const runPlan = async (task: Task) => {
+const runPlan = async (actions: Action[]) => {
+   const hook = new SpinnerHook();
    console.log('--- Plan ---');
-   for await (const _ of task.plan()) {}
+   for (const action of actions) {
+      hook.onStart(action);
+      const result = await action.plan();
+      hook.onEnd(action, result);
+   }
 };
 
-const runDeploy = async (task: Task) => {
+const runDeploy = async (actions: Action[]) => {
+   const hook = new SpinnerHook();
    console.log('--- Deploy ---');
-   for await (const _ of task.apply()) {}
+   for (const action of actions) {
+      hook.onStart(action);
+      const result = await action.apply();
+      hook.onEnd(action, result);
+      if (result.status === ActionStatus.Error) {
+         console.error(colors.red('Deployment halted due to an error.'));
+         break;
+      }
+   }
 };
 
-// main 関数はそのまま
 const main = async () => {
    const args = parse(Deno.args);
    const [command] = args._;
 
    if (args['dry-run']) {
       if (command === 'deploy') {
-         await runPlan(myTask);
+         await runPlan(actions);
       } else if (command === 'uninstall') {
-         const uninstallTask = getUninstallTask(actions, hook);
+         const uninstallTask = getUninstallActions(actions);
          await runPlan(uninstallTask);
       } else {
          console.error('Invalid command for --dry-run. Use "deploy" or "uninstall".');
@@ -86,9 +95,9 @@ const main = async () => {
       }
    } else {
       if (command === 'deploy') {
-         await runDeploy(myTask);
+         await runDeploy(actions);
       } else if (command === 'uninstall') {
-         const uninstallTask = getUninstallTask(actions, hook);
+         const uninstallTask = getUninstallActions(actions);
          await runDeploy(uninstallTask);
       } else {
          console.error('Invalid command. Use "deploy", "uninstall", or "help".');

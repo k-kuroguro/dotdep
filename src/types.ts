@@ -20,6 +20,6 @@ export interface RevertibleAction extends Action {
    getRevertAction(): Action;
 }
 
-export const isRevertibleAction = (action: Action): action is RevertibleAction => {
+export const isRevertibleAction = (action: Readonly<Action>): action is RevertibleAction => {
    return 'getRevertAction' in action && typeof action.getRevertAction === 'function';
 };

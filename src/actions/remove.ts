@@ -4,10 +4,10 @@ import type { Action, ActionResult } from '@/types.ts';
 import { ActionStatus } from '@/types.ts';
 
 export class RemoveAction implements Action {
-   constructor(private readonly target: string) {}
+   constructor(private readonly path: string) {}
 
    get title(): string {
-      return `Remove: ${this.target}`;
+      return `Remove: ${this.path}`;
    }
 
    plan(): Promise<ActionResult> {
@@ -19,7 +19,7 @@ export class RemoveAction implements Action {
       if (state.status !== ActionStatus.Success) return state;
 
       try {
-         await Deno.remove(this.target);
+         await Deno.remove(this.path);
          return state;
       } catch (error: unknown) {
          return {
@@ -30,17 +30,21 @@ export class RemoveAction implements Action {
    }
 
    private async getPreflightResult(): Promise<ActionResult> {
-      if (await exists(this.target)) {
+      if (await exists(this.path)) {
          return { status: ActionStatus.Success };
       }
 
       return {
          status: ActionStatus.Skip,
-         detail: `Target not found: ${this.target}`,
+         detail: `File not found: ${this.path}`,
       };
    }
 }
 
-export const remove = (target: string): Action => {
-   return new RemoveAction(target);
+export interface RemoveParams {
+   path: string;
+}
+
+export const remove = ({ path }: Readonly<RemoveParams>): Action => {
+   return new RemoveAction(path);
 };

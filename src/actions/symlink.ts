@@ -6,16 +6,12 @@ import { ActionStatus } from '@/types.ts';
 
 import { RemoveAction } from './remove.ts';
 
-export interface SymlinkOptions {
-   force: boolean;
-}
-
 export class SymlinkAction implements RevertibleAction {
-   private readonly options: SymlinkOptions;
-
-   constructor(private readonly src: string, private readonly dest: string, options: Partial<SymlinkOptions> = {}) {
-      this.options = { force: false, ...options };
-   }
+   constructor(
+      private readonly src: string,
+      private readonly dest: string,
+      private readonly overwrite: boolean,
+   ) {}
 
    get title(): string {
       return `Symlink: ${this.src} -> ${this.dest}`;
@@ -78,7 +74,7 @@ export class SymlinkAction implements RevertibleAction {
          };
       }
 
-      if (destExists && !this.options.force) {
+      if (destExists && !this.overwrite) {
          return {
             status: ActionStatus.Error,
             detail: `Destination already exists and is not the correct symlink: ${this.dest}`,
@@ -89,6 +85,12 @@ export class SymlinkAction implements RevertibleAction {
    }
 }
 
-export const link = (src: string, dest: string, options: Partial<SymlinkOptions> = {}): Action => {
-   return new SymlinkAction(src, dest, options);
+export interface SymlinkParams {
+   src: string;
+   dest: string;
+   overwrite?: boolean;
+}
+
+export const link = ({ src, dest, overwrite = false }: Readonly<SymlinkParams>): Action => {
+   return new SymlinkAction(src, dest, overwrite);
 };
