@@ -2,7 +2,8 @@ import { DeepReadonly } from 'ts-essentials';
 
 import { Action, ActionResult, ActionStatus, RevertibleAction } from '@/types.ts';
 
-// TODO: Add support for logging to file or displaying stdin/stdout dynamically
+// TODO: Add support for logging to file or displaying stdin/stdout dynamically.
+// TODO: Fix the ugly interface structure.
 
 export interface Cmd {
    cmd: string;
