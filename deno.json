@@ -1,0 +1,26 @@
+{
+   "tasks": {
+      "test": "deno test --parallel --coverage --allow-write --allow-read --allow-net --allow-env --allow-run"
+   },
+   "lint": {
+      "rules": {
+         "tags": [
+            "recommended"
+         ]
+      }
+   },
+   "fmt": {
+      "indentWidth": 3,
+      "semiColons": true,
+      "singleQuote": true,
+      "lineWidth": 120
+   },
+   "exclude": [
+      "./node_modules"
+   ],
+   "nodeModulesDir": "auto",
+   "compilerOptions": {
+      "strict": true,
+      "noUncheckedIndexedAccess": true
+   }
+}
