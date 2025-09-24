@@ -27,7 +27,7 @@ const isCommandAvailable = async (cmd: string): Promise<boolean> => {
 /**
  * An action that runs a command.
  *
- * @tags allow-run, allow-env
+ * @tags allow-run, allow-env=HOME
  */
 export class CommandAction implements Action {
    constructor(
@@ -139,7 +139,7 @@ export interface CommandParams {
 /**
  * Helper function to create a `CommandAction` or `RevertibleCommandAction`.
  *
- * @tags allow-run, allow-env
+ * @tags allow-run, allow-env=HOME
  */
 export function command(
    params: DeepReadonly<Omit<CommandParams, 'revertCommand'> & { revertCommand: NonEmptyArray<string> }>,

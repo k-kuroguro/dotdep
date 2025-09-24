@@ -1,5 +1,5 @@
 // Deploy dotfiles by creating symlinks
-// $ deno run --allow-read --allow-write --allow-env examples/deploy.ts
+// $ deno run --allow-read --allow-write --allow-env=HOME examples/deploy.ts
 
 import { symlink } from 'https://raw.githubusercontent.com/k-kuroguro/dotdep/refs/heads/main/src/mod.ts';
 

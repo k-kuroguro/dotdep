@@ -1,6 +1,6 @@
 {
    "tasks": {
-      "test": "deno test --parallel --coverage --allow-write --allow-read --allow-net --allow-env --allow-run"
+      "test": "deno test --parallel --coverage --allow-write --allow-read --allow-net --allow-env=HOME --allow-run"
    },
    "lint": {
       "rules": {

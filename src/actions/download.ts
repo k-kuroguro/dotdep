@@ -13,7 +13,7 @@ import { remove } from './remove.ts';
  * An action that downloads a file.
  * Can be reverted by removing the downloaded file.
  *
- * @tags allow-read, allow-write, allow-net, allow-env
+ * @tags allow-read, allow-write, allow-net, allow-env=HOME
  */
 export class DownloadAction implements RevertibleAction {
    constructor(
@@ -107,7 +107,7 @@ export interface DownloadParams {
 /**
  * Helper function to create a `DownloadAction`.
  *
- * @tags allow-read, allow-write, allow-net, allow-env
+ * @tags allow-read, allow-write, allow-net, allow-env=HOME
  */
 export const download = ({ url, dest, overwrite = false }: Readonly<DownloadParams>): DownloadAction => {
    return new DownloadAction(url, dest, overwrite);

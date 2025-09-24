@@ -20,7 +20,7 @@ export const getRevertActions = (actions: Action[]): Action[] => {
 /**
  * The current user's home directory read from the HOME environment variable.
  *
- * @tags allow-env
+ * @tags allow-env=HOME
  */
 export const HOME = Deno.env.get('HOME');
 

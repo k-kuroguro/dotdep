@@ -1,5 +1,5 @@
 // Undeploy dotfiles by removing symlinks
-// $ deno run --allow-read --allow-write --allow-env examples/undeploy.ts
+// $ deno run --allow-read --allow-write --allow-env=HOME examples/undeploy.ts
 
 import {
    getRevertActions,

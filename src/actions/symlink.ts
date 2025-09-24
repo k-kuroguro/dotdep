@@ -10,7 +10,7 @@ import { remove } from './remove.ts';
  * An action that creates a symlink.
  * Can be reverted by removing the created symlink.
  *
- * @tags allow-read, allow-write, allow-env
+ * @tags allow-read, allow-write, allow-env=HOME
  */
 export class SymlinkAction implements RevertibleAction {
    constructor(
@@ -109,7 +109,7 @@ export interface SymlinkParams {
 /**
  * Helper function to create a `SymlinkAction`.
  *
- * @tags allow-read, allow-write, allow-env
+ * @tags allow-read, allow-write, allow-env=HOME
  */
 export const symlink = ({ src, dest, overwrite = false }: Readonly<SymlinkParams>): SymlinkAction => {
    return new SymlinkAction(src, dest, overwrite);

@@ -77,7 +77,7 @@ if (answer) {
 ```
 
 ```bash
-deno run --allow-read --allow-write --allow-env examples/deploy.ts
+deno run --allow-read --allow-write --allow-env=HOME examples/deploy.ts
 ```
 
 Other examples can be found in the `examples` directory.

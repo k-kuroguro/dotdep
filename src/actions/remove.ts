@@ -7,7 +7,7 @@ import { resolvePath } from '../utils.ts';
 /**
  * An action that removes a file or directory.
  *
- * @tags allow-write, allow-env
+ * @tags allow-write, allow-env=HOME
  */
 export class RemoveAction implements Action {
    constructor(
@@ -72,7 +72,7 @@ export interface RemoveParams {
 /**
  * Helper function to create a `RemoveAction`.
  *
- * @tags allow-write, allow-env
+ * @tags allow-write, allow-env=HOME
  */
 export const remove = ({ path, recursive = false }: Readonly<RemoveParams>): RemoveAction => {
    return new RemoveAction(path, recursive);
