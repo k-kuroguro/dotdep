@@ -1,7 +1,7 @@
 import type { DeepReadonly, NonEmptyArray } from '../deps.ts';
 
 import { type Action, type ActionResult, ActionStatus } from '../types.ts';
-import { resolvePath } from '../utils.ts';
+import { expandTilde, resolvePath } from '../utils.ts';
 
 export const OutputMode = {
    Inherit: 'inherit',
@@ -12,7 +12,7 @@ export type OutputMode = typeof OutputMode[keyof typeof OutputMode];
 const isCommandAvailable = async (cmd: string): Promise<boolean> => {
    try {
       const p = new Deno.Command(Deno.build.os === 'windows' ? 'where' : 'which', {
-         args: [cmd],
+         args: [expandTilde(cmd)],
          stdout: 'null',
          stderr: 'null',
       }).spawn();
@@ -51,7 +51,7 @@ export class CommandAction implements Action {
       if (state.status !== ActionStatus.Success) return state;
 
       try {
-         const p = new Deno.Command(this.command[0], {
+         const p = new Deno.Command(expandTilde(this.command[0]), {
             args: this.command.slice(1),
             stdout: this.stdout === OutputMode.Inherit ? 'inherit' : 'piped',
             stderr: this.stderr === OutputMode.Inherit ? 'inherit' : 'piped',
