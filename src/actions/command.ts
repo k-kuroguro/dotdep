@@ -11,7 +11,7 @@ export type OutputMode = typeof OutputMode[keyof typeof OutputMode];
 
 const isCommandAvailable = async (cmd: string): Promise<boolean> => {
    try {
-      const p = new Deno.Command(Deno.build.os === 'windows' ? 'where' : 'which', {
+      const p = new Deno.Command('which', {
          args: [expandTilde(cmd)],
          stdout: 'null',
          stderr: 'null',

@@ -18,16 +18,11 @@ export const getRevertActions = (actions: Action[]): Action[] => {
 };
 
 /**
- * The current user's home directory.
- *
- * - Linux/macOS: `$HOME`
- * - Windows: `$USERPROFILE`
- *
- * If neither environment variable is set, this value may be `undefined`.
+ * The current user's home directory read from the HOME environment variable.
  *
  * @tags allow-env
  */
-export const HOME = Deno.env.get('HOME') ?? Deno.env.get('USERPROFILE');
+export const HOME = Deno.env.get('HOME');
 
 /**
  * Expands a tilde (~) at the start of a path to the user's home directory.

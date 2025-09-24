@@ -2,6 +2,8 @@
 
 Dotdep is a library for **dot**files **dep**loying runs on Deno.
 
+This library relies on OS-specific commands and environment variables, and is designed to work on Linux.
+
 ## Design
 
 The core concept of Dotdep is the `Action`. A deployment process is defined as an array of `Action` objects:

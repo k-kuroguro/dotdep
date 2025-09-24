@@ -10,15 +10,7 @@ import { command, CommandAction, OutputMode, RevertibleCommandAction } from './c
 const makeEchoCommand = (
    { stdout = '', stderr = '', exitCode = 0 }: { stdout?: string; stderr?: string; exitCode?: number },
 ): NonEmptyArray<string> => {
-   if (Deno.build.os === 'windows') {
-      return [
-         'cmd',
-         '/c',
-         `echo ${stdout} & echo ${stderr} 1>&2 & exit /b ${exitCode}`,
-      ];
-   } else {
-      return ['sh', '-c', `echo "${stdout}" ; echo "${stderr}" 1>&2 ; exit ${exitCode}`];
-   }
+   return ['sh', '-c', `echo "${stdout}" ; echo "${stderr}" 1>&2 ; exit ${exitCode}`];
 };
 
 Deno.test('command', async (t) => {
@@ -69,7 +61,7 @@ Deno.test('command', async (t) => {
 
    await t.step('should pass environment variable', async () => {
       const action = command({
-         command: makeEchoCommand({ stdout: Deno.build.os === 'windows' ? '%MY_TEST_VAR%' : '$MY_TEST_VAR' }),
+         command: makeEchoCommand({ stdout: '$MY_TEST_VAR' }),
          stdout: OutputMode.Capture,
          stderr: OutputMode.Inherit,
          env: { MY_TEST_VAR: 'hello_env' },
@@ -84,7 +76,7 @@ Deno.test('command', async (t) => {
       await using tmpDir = await makeDisposableTempDir();
 
       const action = command({
-         command: Deno.build.os === 'windows' ? ['cmd', '/c', 'cd'] : ['pwd'],
+         command: ['pwd'],
          stdout: OutputMode.Capture,
          stderr: OutputMode.Capture,
          cwd: tmpDir.path,
@@ -92,7 +84,7 @@ Deno.test('command', async (t) => {
 
       const apply = await action.apply();
       assertEquals(apply.status, ActionStatus.Success);
-      assertMatch(apply.detail!, new RegExp(tmpDir.path.replaceAll('\\', '\\\\')));
+      assertEquals(apply.detail, `stdout:\n${tmpDir.path}`);
    });
 
    await t.step('fails if command does not exist', async () => {
