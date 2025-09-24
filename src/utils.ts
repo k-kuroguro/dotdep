@@ -32,8 +32,13 @@ export const HOME = Deno.env.get('HOME') ?? Deno.env.get('USERPROFILE');
 /**
  * Expands a tilde (~) at the start of a path to the user's home directory.
  * If HOME is undefined or the path does not start with ~, returns the path unchanged.
+ *
+ * Note: This function does NOT attempt to expand "~username" via the system shell.
+ *       Only the current user's home directory (from HOME) is supported.
  */
 export const expandTilde = (path: string): string => {
+   // TODO: Support "~username" expansion.
+
    if (!path) return path;
    if (!HOME) return path;
 
