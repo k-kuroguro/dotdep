@@ -6,6 +6,9 @@ import { resolvePath } from '../utils.ts';
 
 import { remove } from './remove.ts';
 
+// TODO: If server returns ETag, save it locally and skip download if unchanged.
+// TODO: If server returns Last-Modified, compare with local file timestamp and skip if up-to-date.
+
 /**
  * An action that downloads a file.
  * Can be reverted by removing the downloaded file.
