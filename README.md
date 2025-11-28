@@ -10,9 +10,9 @@ The core concept of Dotdep is the `Action`. A deployment process is defined as a
 
 ```ts ignore
 export interface Action {
-  title: string;
-  plan(): Promise<ActionResult>;
-  apply(): Promise<ActionResult>;
+   title: string;
+   plan(): Promise<ActionResult>;
+   apply(): Promise<ActionResult>;
 }
 ```
 
@@ -25,7 +25,7 @@ Some actions can be reverted. These implement the `RevertibleAction` interface:
 
 ```ts ignore
 export interface RevertibleAction extends Action {
-  getRevertAction(): Action;
+   getRevertAction(): Action;
 }
 ```
 
