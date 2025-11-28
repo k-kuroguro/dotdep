@@ -28,7 +28,9 @@ Deno.test('download', async (t) => {
 
       if (HELLO_ROUTE.test(url)) {
          const lastModifiedQuery = url.searchParams.get('last-modified');
-         const headers: Record<string, string> = lastModifiedQuery ? { 'Last-Modified': new Date(lastModifiedQuery).toUTCString() } : {};
+         const headers: Record<string, string> = lastModifiedQuery
+            ? { 'Last-Modified': new Date(lastModifiedQuery).toUTCString() }
+            : {};
 
          if (req.method === 'HEAD') {
             return new Response(null, { status: 200, headers });
@@ -155,7 +157,12 @@ Deno.test('download', async (t) => {
       await Deno.writeTextFile(dest, 'existing');
       await Deno.utime(dest, new Date('2024-01-01T00:00:00Z'), new Date('2024-01-01T00:00:00Z'));
 
-      const action = download({ url: server.url + '/hello?last-modified=' + remoteLastModified.toUTCString(), dest, overwrite: true, timestamping: true });
+      const action = download({
+         url: server.url + '/hello?last-modified=' + remoteLastModified.toUTCString(),
+         dest,
+         overwrite: true,
+         timestamping: true,
+      });
 
       const planResult = await action.plan();
       assertEquals(planResult.status, ActionStatus.Skip);
@@ -176,7 +183,12 @@ Deno.test('download', async (t) => {
       await Deno.writeTextFile(dest, 'existing');
       await Deno.utime(dest, new Date('2023-01-01T00:00:00Z'), new Date('2023-01-01T00:00:00Z'));
 
-      const action = download({ url: server.url + '/hello?last-modified=' + remoteLastModified.toUTCString(), dest, overwrite: true, timestamping: true });
+      const action = download({
+         url: server.url + '/hello?last-modified=' + remoteLastModified.toUTCString(),
+         dest,
+         overwrite: true,
+         timestamping: true,
+      });
 
       const planResult = await action.plan();
       assertEquals(planResult.status, ActionStatus.Success);

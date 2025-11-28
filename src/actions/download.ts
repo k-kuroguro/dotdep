@@ -18,7 +18,7 @@ export class DownloadAction implements RevertibleAction {
       public readonly dest: string,
       public readonly overwrite: boolean,
       public readonly timestamping: boolean,
-   ) { }
+   ) {}
 
    get title(): string {
       return `Download: ${this.url} -> ${this.dest}`;
