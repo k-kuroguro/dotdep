@@ -67,7 +67,7 @@ export class DownloadAction implements RevertibleAction {
    private async getPreflightResult(): Promise<ActionResult> {
       const resolvedDest = resolvePath(this.dest);
 
-      if (await exists(resolvedDest) && !this.overwrite) {
+      if (await exists(resolvedDest) && !this.overwrite && !this.timestamping) {
          return {
             status: ActionStatus.Error,
             detail: `Destination already exists: ${this.dest}`,
@@ -123,7 +123,7 @@ export interface DownloadParams {
    dest: string;
    /** Whether to overwrite an existing destination. (default: false) */
    overwrite?: boolean;
-   /** Whether to skip download if the local file is up-to-date. (default: false) */
+   /** Whether to overwrite the local file only if the remote file is newer. (default: false) */
    timestamping?: boolean;
 }
 

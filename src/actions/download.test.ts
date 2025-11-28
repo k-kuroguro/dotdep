@@ -160,7 +160,6 @@ Deno.test('download', async (t) => {
       const action = download({
          url: server.url + '/hello?last-modified=' + remoteLastModified.toUTCString(),
          dest,
-         overwrite: true,
          timestamping: true,
       });
 
@@ -186,7 +185,6 @@ Deno.test('download', async (t) => {
       const action = download({
          url: server.url + '/hello?last-modified=' + remoteLastModified.toUTCString(),
          dest,
-         overwrite: true,
          timestamping: true,
       });
 
@@ -206,7 +204,7 @@ Deno.test('download', async (t) => {
       const dest = join(tmpDir.path, 'file.txt');
       await Deno.writeTextFile(dest, 'existing');
 
-      const action = download({ url: server.url + '/hello', dest, overwrite: true, timestamping: true });
+      const action = download({ url: server.url + '/hello', dest, timestamping: true });
 
       const planResult = await action.plan();
       assertEquals(planResult.status, ActionStatus.Success);
