@@ -172,6 +172,31 @@ Deno.test('download', async (t) => {
       assertStrictEquals(await Deno.readTextFile(dest), 'existing');
    });
 
+   await t.step('skips download if local file has same time as remote', async () => {
+      const remoteLastModified = new Date('2023-01-01T00:00:00Z');
+
+      await using tmpDir = await makeDisposableTempDir();
+      await using server = await makeDisposableHttpServer(handler);
+
+      const dest = join(tmpDir.path, 'file.txt');
+      await Deno.writeTextFile(dest, 'existing');
+      await Deno.utime(dest, remoteLastModified, remoteLastModified);
+
+      const action = download({
+         url: server.url + '/hello?last-modified=' + remoteLastModified.toUTCString(),
+         dest,
+         timestamping: true,
+      });
+
+      const planResult = await action.plan();
+      assertEquals(planResult.status, ActionStatus.Skip);
+      assertStrictEquals(await Deno.readTextFile(dest), 'existing');
+
+      const applyResult = await action.apply();
+      assertEquals(applyResult.status, ActionStatus.Skip);
+      assertStrictEquals(await Deno.readTextFile(dest), 'existing');
+   });
+
    await t.step('downloads if local file is older than remote', async () => {
       const remoteLastModified = new Date('2024-01-01T00:00:00Z');
 
