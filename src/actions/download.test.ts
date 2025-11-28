@@ -240,6 +240,23 @@ Deno.test('download', async (t) => {
       assertStrictEquals(await Deno.readTextFile(dest), 'hello');
    });
 
+   await t.step('downloads when destination does not exist, even if timestamping=true', async () => {
+      await using tmpDir = await makeDisposableTempDir();
+      await using server = await makeDisposableHttpServer(handler);
+
+      const dest = join(tmpDir.path, 'file.txt');
+
+      const action = download({ url: server.url + '/hello', dest, timestamping: true });
+
+      const planResult = await action.plan();
+      assertEquals(planResult.status, ActionStatus.Success);
+      assert(!(await exists(dest)));
+
+      const applyResult = await action.apply();
+      assertEquals(applyResult.status, ActionStatus.Success);
+      assertStrictEquals(await Deno.readTextFile(dest), 'hello');
+   });
+
    await t.step('getRevertAction returns a remove action', () => {
       const action = download({ url: 'http://example.com/a.txt', dest: 'a.txt' });
       const revertAction = action.getRevertAction();
