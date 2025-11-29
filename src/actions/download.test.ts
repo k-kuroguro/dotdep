@@ -23,12 +23,19 @@ const makeDisposableHttpServer = (
 
 Deno.test('download', async (t) => {
    const handler = (req: Request): Response => {
+      const url = new URL(req.url);
       const HELLO_ROUTE = new URLPattern({ pathname: '/hello' });
-      if (HELLO_ROUTE.test(req.url)) {
+
+      if (HELLO_ROUTE.test(url)) {
+         const lastModifiedQuery = url.searchParams.get('last-modified');
+         const headers: Record<string, string> = lastModifiedQuery
+            ? { 'Last-Modified': new Date(lastModifiedQuery).toUTCString() }
+            : {};
+
          if (req.method === 'HEAD') {
-            return new Response(null, { status: 200 });
+            return new Response(null, { status: 200, headers });
          }
-         return new Response('hello', { status: 200 });
+         return new Response('hello', { status: 200, headers });
       }
 
       return new Response('Not Found', { status: 404 });
@@ -134,6 +141,116 @@ Deno.test('download', async (t) => {
       const planResult = await action.plan();
       assertEquals(planResult.status, ActionStatus.Success);
       assertStrictEquals(await Deno.readTextFile(dest), 'existing');
+
+      const applyResult = await action.apply();
+      assertEquals(applyResult.status, ActionStatus.Success);
+      assertStrictEquals(await Deno.readTextFile(dest), 'hello');
+   });
+
+   await t.step('skips download if local file is newer than remote', async () => {
+      const remoteLastModified = new Date('2023-01-01T00:00:00Z');
+
+      await using tmpDir = await makeDisposableTempDir();
+      await using server = await makeDisposableHttpServer(handler);
+
+      const dest = join(tmpDir.path, 'file.txt');
+      await Deno.writeTextFile(dest, 'existing');
+      await Deno.utime(dest, new Date('2024-01-01T00:00:00Z'), new Date('2024-01-01T00:00:00Z'));
+
+      const action = download({
+         url: server.url + '/hello?last-modified=' + remoteLastModified.toUTCString(),
+         dest,
+         timestamping: true,
+      });
+
+      const planResult = await action.plan();
+      assertEquals(planResult.status, ActionStatus.Skip);
+      assertStrictEquals(await Deno.readTextFile(dest), 'existing');
+
+      const applyResult = await action.apply();
+      assertEquals(applyResult.status, ActionStatus.Skip);
+      assertStrictEquals(await Deno.readTextFile(dest), 'existing');
+   });
+
+   await t.step('skips download if local file has same time as remote', async () => {
+      const remoteLastModified = new Date('2023-01-01T00:00:00Z');
+
+      await using tmpDir = await makeDisposableTempDir();
+      await using server = await makeDisposableHttpServer(handler);
+
+      const dest = join(tmpDir.path, 'file.txt');
+      await Deno.writeTextFile(dest, 'existing');
+      await Deno.utime(dest, remoteLastModified, remoteLastModified);
+
+      const action = download({
+         url: server.url + '/hello?last-modified=' + remoteLastModified.toUTCString(),
+         dest,
+         timestamping: true,
+      });
+
+      const planResult = await action.plan();
+      assertEquals(planResult.status, ActionStatus.Skip);
+      assertStrictEquals(await Deno.readTextFile(dest), 'existing');
+
+      const applyResult = await action.apply();
+      assertEquals(applyResult.status, ActionStatus.Skip);
+      assertStrictEquals(await Deno.readTextFile(dest), 'existing');
+   });
+
+   await t.step('downloads if local file is older than remote', async () => {
+      const remoteLastModified = new Date('2024-01-01T00:00:00Z');
+
+      await using tmpDir = await makeDisposableTempDir();
+      await using server = await makeDisposableHttpServer(handler);
+
+      const dest = join(tmpDir.path, 'file.txt');
+      await Deno.writeTextFile(dest, 'existing');
+      await Deno.utime(dest, new Date('2023-01-01T00:00:00Z'), new Date('2023-01-01T00:00:00Z'));
+
+      const action = download({
+         url: server.url + '/hello?last-modified=' + remoteLastModified.toUTCString(),
+         dest,
+         timestamping: true,
+      });
+
+      const planResult = await action.plan();
+      assertEquals(planResult.status, ActionStatus.Success);
+      assertStrictEquals(await Deno.readTextFile(dest), 'existing');
+
+      const applyResult = await action.apply();
+      assertEquals(applyResult.status, ActionStatus.Success);
+      assertStrictEquals(await Deno.readTextFile(dest), 'hello');
+   });
+
+   await t.step('downloads if server does not provide Last-Modified header with timestamping=true', async () => {
+      await using tmpDir = await makeDisposableTempDir();
+      await using server = await makeDisposableHttpServer(handler);
+
+      const dest = join(tmpDir.path, 'file.txt');
+      await Deno.writeTextFile(dest, 'existing');
+
+      const action = download({ url: server.url + '/hello', dest, timestamping: true });
+
+      const planResult = await action.plan();
+      assertEquals(planResult.status, ActionStatus.Success);
+      assertStrictEquals(await Deno.readTextFile(dest), 'existing');
+
+      const applyResult = await action.apply();
+      assertEquals(applyResult.status, ActionStatus.Success);
+      assertStrictEquals(await Deno.readTextFile(dest), 'hello');
+   });
+
+   await t.step('downloads when destination does not exist, even if timestamping=true', async () => {
+      await using tmpDir = await makeDisposableTempDir();
+      await using server = await makeDisposableHttpServer(handler);
+
+      const dest = join(tmpDir.path, 'file.txt');
+
+      const action = download({ url: server.url + '/hello', dest, timestamping: true });
+
+      const planResult = await action.plan();
+      assertEquals(planResult.status, ActionStatus.Success);
+      assert(!(await exists(dest)));
 
       const applyResult = await action.apply();
       assertEquals(applyResult.status, ActionStatus.Success);
